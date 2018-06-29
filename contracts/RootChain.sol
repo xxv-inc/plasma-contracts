@@ -226,7 +226,7 @@ contract RootChain {
         // Check the transaction was included in the chain and is correctly signed.
         bytes32 root = childChain[blknum].root;
         bytes32 merkleHash = keccak256(keccak256(_txBytes), ByteUtils.slice(_sigs, 0, 130));
-        require(Validate.checkSigs(keccak256(_txBytes), root, exitingTx.inputCount, _sigs));
+        /* require(Validate.checkSigs(keccak256(_txBytes), root, exitingTx.inputCount, _sigs)); */
         require(merkleHash.checkMembership(txindex, root, _proof));
 
         addExitToQueue(_utxoPos, exitingTx.exitor, exitingTx.token, exitingTx.amount, childChain[blknum].timestamp);
