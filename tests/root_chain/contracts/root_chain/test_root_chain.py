@@ -171,18 +171,6 @@ def test_challenge_exit_should_succeed(testlang):
     assert plasma_exit.owner == NULL_ADDRESS_HEX
 
 
-def test_challenge_exit_invalid_challenge_should_fail(testlang):
-    owner, amount = testlang.accounts[0], 100
-    deposit_blknum = testlang.deposit(owner, amount)
-    deposit_id = encode_utxo_id(deposit_blknum, 0, 0)
-    spend_id = testlang.spend_utxo(deposit_id, owner, amount, owner)
-    testlang.confirm_spend(spend_id, owner)
-    testlang.start_exit(owner, spend_id)
-
-    with pytest.raises(TransactionFailed):
-        testlang.challenge_exit(spend_id, spend_id)
-
-
 def test_challenge_exit_invalid_proof_should_fail(testlang):
     owner, amount = testlang.accounts[0], 100
     deposit_blknum = testlang.deposit(owner, amount)
@@ -194,25 +182,9 @@ def test_challenge_exit_invalid_proof_should_fail(testlang):
     testlang.confirm_spend(spend_id_2, owner)
 
     proof = b'deadbeef'
-    (input_index, encoded_spend, _, sigs, confirmation_sig) = testlang.get_challenge_proof(spend_id_1, spend_id_2)
+    (input_index, encoded_spend, _, sigs) = testlang.get_challenge_proof(spend_id_1, spend_id_2)
     with pytest.raises(TransactionFailed):
-        testlang.root_chain.challengeExit(spend_id_1, input_index, encoded_spend, proof, sigs, confirmation_sig)
-
-
-def test_challenge_exit_invalid_confirmation_should_fail(testlang):
-    owner, amount = testlang.accounts[0], 100
-    deposit_blknum = testlang.deposit(owner, amount)
-    deposit_id = encode_utxo_id(deposit_blknum, 0, 0)
-    spend_id_1 = testlang.spend_utxo(deposit_id, owner, amount, owner)
-    testlang.confirm_spend(spend_id_1, owner)
-    testlang.start_exit(owner, spend_id_1)
-    spend_id_2 = testlang.spend_utxo(spend_id_1, owner, amount, owner)
-    testlang.confirm_spend(spend_id_2, owner)
-
-    confirmation_sig = b'deadbeef'
-    (input_index, encoded_spend, proof, sigs, _) = testlang.get_challenge_proof(spend_id_1, spend_id_2)
-    with pytest.raises(TransactionFailed):
-        testlang.root_chain.challengeExit(spend_id_1, input_index, encoded_spend, proof, sigs, confirmation_sig)
+        testlang.root_chain.challengeExit(spend_id_1, input_index, encoded_spend, proof, sigs)
 
 
 # finalizeExits for ETH
