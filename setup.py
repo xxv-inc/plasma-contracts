@@ -28,6 +28,6 @@ setup(
         'web3==4.5.0',
         'rlp==0.6.0',
         'py-solc==3.1.0',
-        'py-solc-simple==0.0.5'
+        'py-solc-simple==0.0.7'
     ]
 )
