@@ -1,13 +1,128 @@
 pragma solidity ^0.4.0;
 
-import "./SafeMath.sol";
-import "./Math.sol";
-import "./PlasmaRLP.sol";
-import "./Merkle.sol";
-import "./Validate.sol";
-import "./PriorityQueue.sol";
+contract ERC20 {
+  function transferFrom(address from, address to, uint256 value) public returns (bool) { return true; }
+  function transfer(address to, uint256 value) public returns (bool) { return true; }
+}
 
-import "./ERC20.sol";
+contract PriorityQueue {
+    /*
+     * This is an naive implementation of a bounded size priority queue.
+     * Until we develop priority queue encodings at the solver level, this
+     * can serve as a WIP placeholder to evaluate queue use in the Rootchain
+     */
+
+    uint256 public currentSize;
+
+    uint256 POS_INF = 999999;
+    uint256 N = 2;
+    mapping(uint256 => uint256) highBits;
+    mapping(uint256 => uint256) lowBits;
+    mapping(uint256 => uint256) hasValue;
+
+    function PriorityQueue() {
+      currentSize = 0;
+      uint256 i = 0;
+      while (i < N) {
+        hasValue[i] = 0;
+        i = i + 1;
+      }
+    }
+
+    function GETMIN_ON_EMPTY() private {
+      assert(false);
+    }
+
+    function INSERT_WHEN_FULL() private {
+      assert(false);
+    }
+
+    function getOpenIndex() returns (uint256) {
+      uint256 i = 0;
+      while (i < N) {
+        if (hasValue[i] == 0)
+          return i;
+        i = i + 1;
+      }
+      INSERT_WHEN_FULL();
+      return 0;
+    }
+
+    function getMinIndex() returns (uint256) {
+      if (currentSize == 0) {
+        GETMIN_ON_EMPTY();
+        revert();
+      }
+
+      uint256 minIdx = POS_INF;
+      uint256 minHighBits = POS_INF;
+      uint256 minLowBits = POS_INF;
+      uint256 i = 0;
+      while (i < N) {
+        if (hasValue[i] == 1) {
+          if (highBits[i] < minHighBits || (highBits[i] == minHighBits && lowBits[i] < minLowBits)) {
+            minHighBits = highBits[i];
+            minLowBits = lowBits[i];
+            minIdx = i;
+          }
+        }
+        i = i + 1;
+      }
+
+      return minIdx;
+    }
+
+    function delMin() public returns (uint256) {
+      uint256 idx = getMinIndex();
+      hasValue[idx] = 0;
+      currentSize = currentSize - 1;
+      return currentSize;
+    }
+
+    function getMinHighBits() public view returns (uint256) {
+      uint256 idx = getMinIndex();
+      return highBits[idx];
+    }
+
+    function getMinLowBits() public view returns (uint256) {
+      uint256 idx = getMinIndex();
+      return lowBits[idx];
+    }
+
+    function insert(uint256 high, uint256 low) public {
+      uint256 idx = getOpenIndex();
+      hasValue[idx] = 1;
+      currentSize = currentSize + 1;
+      lowBits[idx] = low;
+      highBits[idx] = high;
+    }
+}
+
+contract Exit {
+    address public owner;
+    address public token;
+    uint256 public amount;
+
+    function Exit(address o, address t, uint256 a) {
+        owner = o;
+        token = t;
+        amount = a;
+    }
+
+    function delOwner() {
+        delete owner;
+    }
+}
+
+contract ChildBlock {
+    bytes32 public root;
+    uint256 public timestamp;
+
+    function ChildBlock(bytes32 r, uint256 t) {
+        root = r;
+        timestamp = t;
+    }
+}
 
 
 /**
@@ -15,11 +130,6 @@ import "./ERC20.sol";
  * @dev This contract secures a utxo payments plasma child chain to ethereum.
  */
 contract RootChain {
-    using SafeMath for uint256;
-    using Merkle for bytes32;
-    using PlasmaRLP for bytes;
-
-
     /*
      * Events
      */
@@ -52,28 +162,19 @@ contract RootChain {
      */
 
     uint256 public constant CHILD_BLOCK_INTERVAL = 1000;
+    uint256 constant UTXO_POS_BLKSIZE = 1000000000;
+    uint256 constant UTXO_POS_TXINDEX = 10000;
 
     address public operator;
 
     uint256 public currentChildBlock;
     uint256 public currentDepositBlock;
     uint256 public currentFeeExit;
+    bytes placeholder;
 
-    mapping (uint256 => ChildBlock) public childChain;
-    mapping (uint256 => Exit) public exits;
+    mapping (uint256 => address) public childChain;
+    mapping (uint256 => address) public exits;
     mapping (address => address) public exitsQueues;
-
-    struct Exit {
-        address owner;
-        address token;
-        uint256 amount;
-    }
-
-    struct ChildBlock {
-        bytes32 root;
-        uint256 timestamp;
-    }
-
 
     /*
      * Modifiers
@@ -89,7 +190,7 @@ contract RootChain {
      * Constructor
      */
 
-    constructor()
+    function RootChain()
         public
     {
         operator = msg.sender;
@@ -101,6 +202,52 @@ contract RootChain {
         exitsQueues[address(0)] = address(new PriorityQueue());
     }
 
+    /*
+     * Function from ByteUtils, Validate, Merklei, PlasmaRLP, ECRecovery inlined.
+     * WIP: for testing SM infrastructure.
+     * At the moment we abstract away their true functionality and return
+     * trivial values. In final version, their actual functionality will be verified
+     */
+
+    function slice(bytes _bytes, uint _start, uint _length) public returns
+    (bytes) { return _bytes; }
+
+    function checkSigs(bytes32 txHash, bytes32 rootHash, uint256 blknum2, bytes
+                       sigs) internal view returns (bool) {
+      return true;
+    }
+
+    function checkMembership(bytes32 leaf, uint256 index, bytes32 rootHash, bytes proof)
+    pure
+    returns (bool) { return true; }
+
+    function getUtxoPos(bytes memory challengingTxBytes, uint256 oIndex)
+    internal
+    constant
+    returns (uint256) { return 0; }
+
+    function recover(bytes32 _hash, bytes _sig)
+    internal
+    pure
+    returns (address) { return address(0); }
+
+    struct ExitingTxWrapper {
+        address exitor;
+        address token;
+        uint256 amount;
+        uint256 inputCount;
+    }
+
+    function createExitingTx(bytes memory exitingTxBytes, uint256 oindex)
+        internal
+        constant
+        returns (ExitingTxWrapper) {
+                return ExitingTxWrapper({
+                        exitor: address(0),
+                        token: address(0),
+                        amount: 0,
+                        inputCount: 0});
+    }
 
     /*
      * Public Functions
@@ -125,16 +272,16 @@ contract RootChain {
         onlyOperator
     {
         uint256 submittedBlockNumber = currentChildBlock;
-        childChain[currentChildBlock] = ChildBlock({
-            root: _root,
-            timestamp: block.timestamp
-        });
+        childChain[currentChildBlock] = new ChildBlock(
+            _root,
+            block.timestamp
+        );
 
         // Update block numbers.
-        currentChildBlock = currentChildBlock.add(CHILD_BLOCK_INTERVAL);
+        currentChildBlock = currentChildBlock + CHILD_BLOCK_INTERVAL;
         currentDepositBlock = 1;
 
-        emit BlockSubmitted(submittedBlockNumber);
+        BlockSubmitted(submittedBlockNumber);
     }
 
     /**
@@ -154,15 +301,16 @@ contract RootChain {
     /**
      * @dev Deposits approved amount of ERC20 token. Approve must be called first. Note: does not check if token was added.
      */
-    function depositFrom(address _token, uint256 _amount)
+    function depositFrom(address _owner, address _token, uint256 _amount)
         public
     {
         // Only allow up to CHILD_BLOCK_INTERVAL deposits per child block.
         require(currentDepositBlock < CHILD_BLOCK_INTERVAL);
 
         // Warning, check your ERC20 implementation. TransferFrom should return bool
-        require(ERC20(_token).transferFrom(msg.sender, address(this), _amount));
-        writeDepositBlock(msg.sender, _token, _amount);
+        ERC20 tok = ERC20(_token);
+        require(tok.transferFrom(_owner, address(this), _amount));
+        writeDepositBlock(_owner, _token, _amount);
     }
 
     /**
@@ -174,17 +322,19 @@ contract RootChain {
     function startDepositExit(uint256 _depositPos, address _token, uint256 _amount)
         public
     {
-        uint256 blknum = _depositPos / 1000000000;
+        // uint256 blknum = _depositPos / UTXO_POS_BLKSIZE;
+        uint256 blknum = 1; // PLACEHOLDER for div
 
         // Check that the given UTXO is a deposit.
         require(blknum % CHILD_BLOCK_INTERVAL != 0);
 
         // Validate the given owner and amount.
-        bytes32 root = childChain[blknum].root;
-        bytes32 depositHash = keccak256(msg.sender, _token, _amount);
+        ChildBlock blk = ChildBlock(childChain[blknum]);
+        bytes32 root = blk.root();
+        bytes32 depositHash = keccak256(a_a_i(msg.sender, _token, _amount));
         require(root == depositHash);
 
-        addExitToQueue(_depositPos, msg.sender, _token, _amount, childChain[blknum].timestamp);
+        addExitToQueue(_depositPos, msg.sender, _token, _amount, blk.timestamp());
     }
 
     /**
@@ -197,7 +347,7 @@ contract RootChain {
         onlyOperator
     {
         addExitToQueue(currentFeeExit, msg.sender, _token, _amount, block.timestamp + 1);
-        currentFeeExit = currentFeeExit.add(1);
+        currentFeeExit = currentFeeExit + 1;
     }
 
     /**
@@ -215,20 +365,22 @@ contract RootChain {
     )
         public
     {
-        uint256 blknum = _utxoPos / 1000000000;
-        uint256 txindex = (_utxoPos % 1000000000) / 10000;
-        uint256 oindex = _utxoPos - blknum * 1000000000 - txindex * 10000;
+        uint256 blknum = _utxoPos / UTXO_POS_BLKSIZE;
+        uint256 txindex = (_utxoPos % UTXO_POS_BLKSIZE) / UTXO_POS_TXINDEX;
+        uint256 oindex = _utxoPos - blknum * UTXO_POS_BLKSIZE - txindex * UTXO_POS_TXINDEX;
 
         // Check the sender owns this UTXO.
-        var exitingTx = _txBytes.createExitingTx(oindex);
+        var exitingTx = createExitingTx(_txBytes, oindex);
         require(msg.sender == exitingTx.exitor);
 
         // Check the transaction was included in the chain.
-        bytes32 root = childChain[blknum].root;
-        bytes32 merkleHash = keccak256(keccak256(_txBytes), ByteUtils.slice(_sigs, 0, 130));
-        require(merkleHash.checkMembership(txindex, root, _proof));
+        ChildBlock blk = ChildBlock(childChain[blknum]);
+        bytes32 root = blk.root();
+        bytes32 merkleHash = keccak256(b32_b(keccak256(_txBytes), slice(_sigs, 0, 130)));
+        require(checkSigs(keccak256(_txBytes), root, exitingTx.inputCount, _sigs));
+        require(checkMembership(merkleHash, txindex, root, _proof));
 
-        addExitToQueue(_utxoPos, exitingTx.exitor, exitingTx.token, exitingTx.amount, childChain[blknum].timestamp);
+        addExitToQueue(_utxoPos, exitingTx.exitor, exitingTx.token, exitingTx.amount, blk.timestamp());
     }
 
     /**
@@ -249,22 +401,33 @@ contract RootChain {
         public
     {
         var txHash = keccak256(_txBytes);
-        uint256 eUtxoPos = _txBytes.getUtxoPos(_eUtxoIndex);
-        address owner = exits[eUtxoPos].owner;
-        uint256 blknum = _cUtxoPos / 1000000000;
-        uint256 txindex = (_cUtxoPos % 1000000000) / 10000;
-        uint256 oindex = _cUtxoPos - blknum * 1000000000 - txindex * 10000;
+        uint256 eUtxoPos = getUtxoPos(_txBytes, _eUtxoIndex);
+        address owner = Exit(exits[eUtxoPos]).owner();
+        uint256 blknum = _cUtxoPos / UTXO_POS_BLKSIZE;
+        uint256 txindex = (_cUtxoPos % UTXO_POS_BLKSIZE) / UTXO_POS_TXINDEX;
+        uint256 oindex = _cUtxoPos - blknum * UTXO_POS_BLKSIZE - txindex * UTXO_POS_TXINDEX;
 
         // Check if double-spend was signed by utxo owner.
-        require(Validate.checkSigs(txHash, owner, oindex, _sigs));
+        require(checkSigs(txHash, owner, oindex, _sigs));
 
         // Check if spending transaction was included.
-        bytes32 root = childChain[_cUtxoPos / 1000000000].root;
-        var merkleHash = keccak256(txHash, _sigs);
-        require(merkleHash.checkMembership(txindex, root, _proof));
+        bytes32 root = ChildBlock(childChain[_cUtxoPos / UTXO_POS_BLKSIZE]).root();
+        var merkleHash = keccak256(b32_b(txHash, _sigs));
+        require(checkMembership(merkleHash, txindex, root, _proof));
 
         // Delete the owner but keep the amount to prevent another exit.
-        delete exits[eUtxoPos].owner;
+        e.delOwner();
+    }
+
+    function VERY_VERY_INVALID() private {}
+    function CONSTRAINT_VALID() private {}
+
+    function CHECK_INVALID_CALLWITH_1(uint256 x) private {
+       if (x == 2) {
+           VERY_VERY_INVALID();
+       } else {
+           CONSTRAINT_VALID();
+       }
     }
 
     /**
@@ -279,35 +442,50 @@ contract RootChain {
         uint256 utxoPos;
         uint256 exitable_at;
         uint256 _exitsLeft = _exitsToProcess;
-        (utxoPos, exitable_at) = getNextExit(_token);
+        address owner;
+        uint256 amt;
+        CHECK_INVALID_CALLWITH_1(1);
+
+        utxoPos = getNextExitPosition(_token);
+        exitable_at = getNextExitTime(_token);
         require(_topUtxoPos == utxoPos || _topUtxoPos == 0);
-        Exit memory currentExit = exits[utxoPos];
+        Exit currentExit = Exit(exits[utxoPos]);
         PriorityQueue queue = PriorityQueue(exitsQueues[_token]);
+        CHECK_INVALID_CALLWITH_1(1);
         while (exitable_at < block.timestamp && _exitsLeft > 0) {
-            currentExit = exits[utxoPos];
+
+            currentExit = Exit(exits[utxoPos]);
+            owner = currentExit.owner();
+            amt = currentExit.amount();
 
             queue.delMin();
 
             // Send funds only if exit was not successfully challenged.
-            if (exits[utxoPos].owner != address(0)) {
+            if (owner != address(0)) {
                 if (_token == address(0)) {
-                    currentExit.owner.transfer(currentExit.amount);
-                }
-                else {
-                    require(ERC20(_token).transfer(currentExit.owner, currentExit.amount));
+                    if (!owner.call.value(amt)()) { revert(); }
+                } else {
+                    ERC20 tt = ERC20(_token);
+                    require(tt.transfer(owner, amt));
                 }
             }
-            delete exits[utxoPos].owner;
+            // delete exits[utxoPos].owner;
+            currentExit.delOwner();
 
             if (queue.currentSize() > 0) {
-                (utxoPos, exitable_at) = getNextExit(_token);
-                _exitsLeft = _exitsLeft.sub(1);
+                NONEMPTY_QUEUE();
+                // utxoPos = getNextExitPosition(_token);
+                // exitable_at = getNextExitTime(_token);
+                _exitsLeft = _exitsLeft - 1;
             } else {
+                EMPTY_QUEUE();
                 return;
             }
         }
     }
 
+    function NONEMPTY_QUEUE() private { }
+    function EMPTY_QUEUE() private { }
 
     /*
      * Public view functions
@@ -330,12 +508,22 @@ contract RootChain {
      * @param _blockNumber Number of the block to return.
      * @return Child chain block at the specified block number.
      */
-    function getChildChain(uint256 _blockNumber)
+    function getChildChainRoot(uint256 _blockNumber)
         public
         view
-        returns (bytes32, uint256)
+        returns (bytes32)
     {
-        return (childChain[_blockNumber].root, childChain[_blockNumber].timestamp);
+        ChildBlock blk = ChildBlock(childChain[_blockNumber]);
+        return blk.root();
+    }
+
+    function getChildChainTimestamp(uint256 _blockNumber)
+        public
+        view
+        returns (uint256)
+    {
+        ChildBlock blk = ChildBlock(childChain[_blockNumber]);
+        return blk.timestamp();
     }
 
     /**
@@ -347,7 +535,7 @@ contract RootChain {
         view
         returns (uint256)
     {
-        return currentChildBlock.sub(CHILD_BLOCK_INTERVAL).add(currentDepositBlock);
+        return currentChildBlock - CHILD_BLOCK_INTERVAL + currentDepositBlock;
     }
 
     /**
@@ -355,28 +543,61 @@ contract RootChain {
      * @param _utxoPos Position of the UTXO in the chain.
      * @return A tuple representing the active exit for the given UTXO.
      */
-    function getExit(uint256 _utxoPos)
+    function getExitOwner(uint256 _utxoPos)
         public
         view
-        returns (address, address, uint256)
+        returns (address)
     {
-        return (exits[_utxoPos].owner, exits[_utxoPos].token, exits[_utxoPos].amount);
+        Exit e = Exit(exits[_utxoPos]);
+        return e.owner();
+    }
+
+    function getExitToken(uint256 _utxoPos)
+        public
+        view
+        returns (address)
+    {
+        Exit e = Exit(exits[_utxoPos]);
+        return e.token();
+    }
+
+    function getExitAmount(uint256 _utxoPos)
+        public
+        view
+        returns (uint256)
+    {
+        Exit e = Exit(exits[_utxoPos]);
+        return e.amount();
     }
 
     /**
      * @dev Determines the next exit to be processed.
      * @param _token Asset type to be exited.
-     * @return A tuple of the position and time when this exit can be processed.
+     * @return Position when this exit can be processed.
      */
-    function getNextExit(address _token)
+    function getNextExitPosition(address _token)
         public
         view
-        returns (uint256, uint256)
+        returns (uint256)
     {
-        uint256 priority = PriorityQueue(exitsQueues[_token]).getMin();
-        uint256 utxoPos = uint256(uint128(priority));
-        uint256 exitable_at = priority >> 128;
-        return (utxoPos, exitable_at);
+        PriorityQueue queue = PriorityQueue(exitsQueues[_token]);
+        uint256 utxoPos = queue.getMinLowBits();
+        return utxoPos;
+    }
+
+    /**
+     * @dev Determines the next exit to be processed.
+     * @param _token Asset type to be exited.
+     * @return Time when this exit can be processed.
+     */
+    function getNextExitTime(address _token)
+        public
+        view
+        returns (uint256)
+    {
+        PriorityQueue queue = PriorityQueue(exitsQueues[_token]);
+        uint256 exitable_at = queue.getMinHighBits();
+        return exitable_at;
     }
 
 
@@ -384,6 +605,33 @@ contract RootChain {
      * Private functions
      */
 
+    /**
+     * @dev Placeholder function that abstract polymorphism of `keccak256`
+     */
+    function a_a_i(address x, address y, uint256 i) returns (bytes) {
+      return placeholder;
+    }
+
+    /**
+     * @dev Placeholder function that abstract polymorphism of `keccak256`
+     */
+    function b_b(bytes b1, bytes b2) returns (bytes) {
+      return placeholder;
+    }
+
+    /**
+     * @dev Placeholder function that abstract polymorphism of `keccak256`
+     */
+    function b32_b(bytes32 b1, bytes b2) returns (bytes) {
+      return placeholder;
+    }
+
+    /**
+     * @dev Placeholder function that abstract polymorphism of `keccak256`
+     */
+    function b_b32(bytes32 b1, bytes32 b2) returns (bytes) {
+      return placeholder;
+    }
 
     /**
      * @dev Adds deposit block to chain of blocks.
@@ -400,15 +648,15 @@ contract RootChain {
         // deposit with blknum ending with 000.
         require(currentDepositBlock < CHILD_BLOCK_INTERVAL);
 
-        bytes32 root = keccak256(_owner, _token, _amount);
+        bytes32 root = keccak256(a_a_i(_owner, _token, _amount));
         uint256 depositBlock = getDepositBlock();
-        childChain[depositBlock] = ChildBlock({
-            root: root,
-            timestamp: block.timestamp
-        });
-        currentDepositBlock = currentDepositBlock.add(1);
+        childChain[depositBlock] = new ChildBlock(
+            root,
+            block.timestamp
+        );
+        currentDepositBlock = currentDepositBlock + 1;
 
-        emit Deposit(_owner, depositBlock, _token, _amount);
+        Deposit(_owner, depositBlock, _token, _amount);
     }
 
 
@@ -433,22 +681,58 @@ contract RootChain {
         require(exitsQueues[_token] != address(0));
 
         // Calculate priority.
-        uint256 exitable_at = Math.max(_created_at + 2 weeks, block.timestamp + 1 weeks);
-        uint256 priority = exitable_at << 128 | _utxoPos;
+        uint256 exitable_A = _created_at + 2 weeks;
+        uint256 exitable_B = block.timestamp + 1 weeks;
+        uint256 exitable_at;
+        if (exitable_A > exitable_B)
+             exitable_at = exitable_A;
+        else
+             exitable_at = exitable_B;
 
         // Check exit is valid and doesn't already exist.
         require(_amount > 0);
-        require(exits[_utxoPos].amount == 0);
+        // Synthetic Minds: Skip this test as uses Solidity's feature of returning 0-init
+        // values when the keys are unset. I.e., in Solidity, maps are complete.
+        //// Exit e = Exit(exits[_utxoPos]);
+        //// require(e.amount() == 0);
 
         PriorityQueue queue = PriorityQueue(exitsQueues[_token]);
-        queue.insert(priority);
+        queue.insert(exitable_at, _utxoPos);
 
-        exits[_utxoPos] = Exit({
-            owner: _exitor,
-            token: _token,
-            amount: _amount
-        });
+        CHECK_INVALID_CALLWITH_1(1);
 
-        emit ExitStarted(msg.sender, _utxoPos, _token, _amount);
+        exits[_utxoPos] = new Exit(
+            _exitor,
+            _token,
+            _amount
+        );
+
+        CHECK_INVALID_CALLWITH_1(1);
+
+        ExitStarted(msg.sender, _utxoPos, _token, _amount);
+    }
+}
+
+contract EvalQueue {
+    function nondet(uint256 id) pure returns (uint256) { return 0; }
+    function main() view public {
+      uint256 a = nondet(0);
+      uint256 b = nondet(1);
+      uint256 x = nondet(2);
+      uint256 y = nondet(3);
+      PriorityQueue pq = new PriorityQueue();
+      pq.insert(a, b);
+      pq.insert(x, y);
+      uint256 mH = pq.getMinHighBits();
+      uint256 mL = pq.getMinLowBits();
+
+      // a < x => min = (a, b)
+      assert(a >= x || (mH == a && mL == b));
+      // x < a => min = (x, y)
+      assert(x >= a || (mH == x && mL == y));
+      // x = a && b < y => min = (a, b)
+      assert(x != a || b >= y || (mH == a && mL == b));
+      // x = a && y < b => min = (x, y)
+      assert(x != a || y >= b || (mH == x && mL == y));
     }
 }
