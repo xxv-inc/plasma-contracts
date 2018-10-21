@@ -212,7 +212,7 @@ contract RootChain {
     function slice(bytes _bytes, uint _start, uint _length) public returns
     (bytes) { return _bytes; }
 
-    function checkSigs(bytes32 txHash, bytes32 rootHash, uint256 blknum2, bytes
+    function checkSigs(bytes32 txHash, address exitor, uint256 oindex, bytes
                        sigs) internal view returns (bool) {
       return true;
     }
@@ -377,7 +377,6 @@ contract RootChain {
         ChildBlock blk = ChildBlock(childChain[blknum]);
         bytes32 root = blk.root();
         bytes32 merkleHash = keccak256(b32_b(keccak256(_txBytes), slice(_sigs, 0, 130)));
-        require(checkSigs(keccak256(_txBytes), root, exitingTx.inputCount, _sigs));
         require(checkMembership(merkleHash, txindex, root, _proof));
 
         addExitToQueue(_utxoPos, exitingTx.exitor, exitingTx.token, exitingTx.amount, blk.timestamp());
@@ -402,18 +401,18 @@ contract RootChain {
     {
         var txHash = keccak256(_txBytes);
         uint256 eUtxoPos = getUtxoPos(_txBytes, _eUtxoIndex);
-        address owner = Exit(exits[eUtxoPos]).owner();
+        Exit e = Exit(exits[eUtxoPos]);
         uint256 blknum = _cUtxoPos / UTXO_POS_BLKSIZE;
         uint256 txindex = (_cUtxoPos % UTXO_POS_BLKSIZE) / UTXO_POS_TXINDEX;
         uint256 oindex = _cUtxoPos - blknum * UTXO_POS_BLKSIZE - txindex * UTXO_POS_TXINDEX;
 
         // Check if double-spend was signed by utxo owner.
-        require(checkSigs(txHash, owner, oindex, _sigs));
+        require(checkSigs(txHash, e.owner(), oindex, _sigs));
 
         // Check if spending transaction was included.
-        bytes32 root = ChildBlock(childChain[_cUtxoPos / UTXO_POS_BLKSIZE]).root();
+        ChildBlock cblk = ChildBlock(childChain[_cUtxoPos / UTXO_POS_BLKSIZE]);
         var merkleHash = keccak256(b32_b(txHash, _sigs));
-        require(checkMembership(merkleHash, txindex, root, _proof));
+        require(checkMembership(merkleHash, txindex, cblk.root(), _proof));
 
         // Delete the owner but keep the amount to prevent another exit.
         e.delOwner();
