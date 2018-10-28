@@ -190,10 +190,10 @@ contract RootChain {
      * Constructor
      */
 
-    function RootChain()
+    function RootChain(address parent)
         public
     {
-        operator = msg.sender;
+        operator = parent; // msg.sender;
         currentChildBlock = CHILD_BLOCK_INTERVAL;
         currentDepositBlock = 1;
         currentFeeExit = 1;
@@ -443,14 +443,12 @@ contract RootChain {
         uint256 _exitsLeft = _exitsToProcess;
         address owner;
         uint256 amt;
-        CHECK_INVALID_CALLWITH_1(1);
 
         utxoPos = getNextExitPosition(_token);
         exitable_at = getNextExitTime(_token);
         require(_topUtxoPos == utxoPos || _topUtxoPos == 0);
         Exit currentExit = Exit(exits[utxoPos]);
         PriorityQueue queue = PriorityQueue(exitsQueues[_token]);
-        CHECK_INVALID_CALLWITH_1(1);
         while (exitable_at < block.timestamp && _exitsLeft > 0) {
 
             currentExit = Exit(exits[utxoPos]);
@@ -473,11 +471,13 @@ contract RootChain {
 
             if (queue.currentSize() > 0) {
                 NONEMPTY_QUEUE();
+                CHECK_INVALID_CALLWITH_1(1);
                 // utxoPos = getNextExitPosition(_token);
                 // exitable_at = getNextExitTime(_token);
                 _exitsLeft = _exitsLeft - 1;
             } else {
                 EMPTY_QUEUE();
+                CHECK_INVALID_CALLWITH_1(1);
                 return;
             }
         }
