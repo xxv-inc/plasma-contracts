@@ -274,7 +274,7 @@ contract RootChain {
         uint256 submittedBlockNumber = currentChildBlock;
         childChain[currentChildBlock] = new ChildBlock(
             _root,
-            block.timestamp
+            now
         );
 
         // Update block numbers.
@@ -346,7 +346,7 @@ contract RootChain {
         public
         onlyOperator
     {
-        addExitToQueue(currentFeeExit, msg.sender, _token, _amount, block.timestamp + 1);
+        addExitToQueue(currentFeeExit, msg.sender, _token, _amount, now + 1);
         currentFeeExit = currentFeeExit + 1;
     }
 
@@ -449,7 +449,7 @@ contract RootChain {
         require(_topUtxoPos == utxoPos || _topUtxoPos == 0);
         Exit currentExit = Exit(exits[utxoPos]);
         PriorityQueue queue = PriorityQueue(exitsQueues[_token]);
-        while (exitable_at < block.timestamp && _exitsLeft > 0) {
+        while (exitable_at < now && _exitsLeft > 0) {
 
             currentExit = Exit(exits[utxoPos]);
             owner = currentExit.owner();
@@ -651,7 +651,7 @@ contract RootChain {
         uint256 depositBlock = getDepositBlock();
         childChain[depositBlock] = new ChildBlock(
             root,
-            block.timestamp
+            now
         );
         currentDepositBlock = currentDepositBlock + 1;
 
@@ -681,7 +681,7 @@ contract RootChain {
 
         // Calculate priority.
         uint256 exitable_A = _created_at + 2 weeks;
-        uint256 exitable_B = block.timestamp + 1 weeks;
+        uint256 exitable_B = now + 1 weeks;
         uint256 exitable_at;
         if (exitable_A > exitable_B)
              exitable_at = exitable_A;
