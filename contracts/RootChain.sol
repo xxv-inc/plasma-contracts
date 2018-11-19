@@ -29,11 +29,11 @@ contract PriorityQueue {
       }
     }
 
-    function GETMIN_ON_EMPTY() private {
+    function GETMIN_ON_EMPTY() pure private {
       assert(false);
     }
 
-    function INSERT_WHEN_FULL() private {
+    function INSERT_WHEN_FULL() pure private {
       assert(false);
     }
 
@@ -418,10 +418,11 @@ contract RootChain {
         e.delOwner();
     }
 
-    function VERY_VERY_INVALID() private {}
-    function CONSTRAINT_VALID() private {}
+    function VERY_VERY_INVALID() private pure {}
+    function CONSTRAINT_VALID() private pure {}
+    function UTXOPOS_EQUALS_1() private pure {}
 
-    function CHECK_INVALID_CALLWITH_1(uint256 x) private {
+    function CHECK_INVALID_CALLWITH_1(uint256 x) pure private {
        if (x == 2) {
            VERY_VERY_INVALID();
        } else {
@@ -447,44 +448,61 @@ contract RootChain {
         utxoPos = getNextExitPosition(_token);
         exitable_at = getNextExitTime(_token);
         require(_topUtxoPos == utxoPos || _topUtxoPos == 0);
-        Exit currentExit = Exit(exits[utxoPos]);
         PriorityQueue queue = PriorityQueue(exitsQueues[_token]);
         while (exitable_at < now && _exitsLeft > 0) {
+            INSIDE_LOOP();
 
-            currentExit = Exit(exits[utxoPos]);
+            Exit currentExit = Exit(exits[utxoPos]);
             owner = currentExit.owner();
             amt = currentExit.amount();
 
             queue.delMin();
+            STEPPED();
 
             // Send funds only if exit was not successfully challenged.
+            // SM: Solver needs to maintain that addresses are `!0`.
             if (owner != address(0)) {
+                OWNER_VALID();
                 if (_token == address(0)) {
+                    TOKEN_ETH();
                     if (!owner.call.value(amt)()) { revert(); }
+                    STEPPED();
                 } else {
                     ERC20 tt = ERC20(_token);
                     require(tt.transfer(owner, amt));
                 }
+                END_OWNER();
             }
+            ATTEMPT_DEL_OWNER();
             // delete exits[utxoPos].owner;
             currentExit.delOwner();
+            DELETED_OWNER();
 
             if (queue.currentSize() > 0) {
                 NONEMPTY_QUEUE();
-                CHECK_INVALID_CALLWITH_1(1);
                 // utxoPos = getNextExitPosition(_token);
                 // exitable_at = getNextExitTime(_token);
                 _exitsLeft = _exitsLeft - 1;
             } else {
                 EMPTY_QUEUE();
-                CHECK_INVALID_CALLWITH_1(1);
                 return;
             }
+            END_LOOP();
         }
+        EXIT_LOOP();
     }
 
-    function NONEMPTY_QUEUE() private { }
-    function EMPTY_QUEUE() private { }
+    function INSIDE_LOOP() pure private { }
+    function EXIT_LOOP() pure private { }
+    function END_LOOP() pure private { }
+    function NONEMPTY_QUEUE() pure private { }
+    function EMPTY_QUEUE() pure private { }
+    function STEPPED() pure private { }
+    function OWNER_VALID() pure private { }
+    function END_OWNER() pure private { }
+    function TOKEN_ETH() pure private { }
+    function ATTEMPT_DEL_OWNER() pure private { }
+    function DELETED_OWNER() pure private { }
 
     /*
      * Public view functions
@@ -700,6 +718,8 @@ contract RootChain {
 
         CHECK_INVALID_CALLWITH_1(1);
 
+        // Synthetic Minds: The check above ensures that `_utxoPos` will be an unoccupied
+        // field. So no overwrite is possible here. Unless the amount installed was `0`
         exits[_utxoPos] = new Exit(
             _exitor,
             _token,
@@ -714,7 +734,7 @@ contract RootChain {
 
 contract EvalQueue {
     function nondet(uint256 id) pure returns (uint256) { return 0; }
-    function main() view public {
+    function main() public {
       uint256 a = nondet(0);
       uint256 b = nondet(1);
       uint256 x = nondet(2);
