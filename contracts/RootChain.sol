@@ -331,7 +331,7 @@ contract RootChain {
         // Validate the given owner and amount.
         ChildBlock blk = ChildBlock(childChain[blknum]);
         bytes32 root = blk.root();
-        bytes32 depositHash = keccak256(a_a_i(msg.sender, _token, _amount));
+        bytes32 depositHash = keccak256(msg.sender, _token, _amount);
         require(root == depositHash);
 
         addExitToQueue(_depositPos, msg.sender, _token, _amount, blk.timestamp());
@@ -376,7 +376,7 @@ contract RootChain {
         // Check the transaction was included in the chain.
         ChildBlock blk = ChildBlock(childChain[blknum]);
         bytes32 root = blk.root();
-        bytes32 merkleHash = keccak256(b32_b(keccak256(_txBytes), slice(_sigs, 0, 130)));
+        bytes32 merkleHash = keccak256(keccak256(_txBytes), slice(_sigs, 0, 130));
         require(checkMembership(merkleHash, txindex, root, _proof));
 
         addExitToQueue(_utxoPos, exitingTx.exitor, exitingTx.token, exitingTx.amount, blk.timestamp());
@@ -411,7 +411,7 @@ contract RootChain {
 
         // Check if spending transaction was included.
         ChildBlock cblk = ChildBlock(childChain[_cUtxoPos / UTXO_POS_BLKSIZE]);
-        var merkleHash = keccak256(b32_b(txHash, _sigs));
+        var merkleHash = keccak256(txHash, _sigs);
         require(checkMembership(merkleHash, txindex, cblk.root(), _proof));
 
         // Delete the owner but keep the amount to prevent another exit.
@@ -623,34 +623,6 @@ contract RootChain {
      */
 
     /**
-     * @dev Placeholder function that abstract polymorphism of `keccak256`
-     */
-    function a_a_i(address x, address y, uint256 i) returns (bytes) {
-      return placeholder;
-    }
-
-    /**
-     * @dev Placeholder function that abstract polymorphism of `keccak256`
-     */
-    function b_b(bytes b1, bytes b2) returns (bytes) {
-      return placeholder;
-    }
-
-    /**
-     * @dev Placeholder function that abstract polymorphism of `keccak256`
-     */
-    function b32_b(bytes32 b1, bytes b2) returns (bytes) {
-      return placeholder;
-    }
-
-    /**
-     * @dev Placeholder function that abstract polymorphism of `keccak256`
-     */
-    function b_b32(bytes32 b1, bytes32 b2) returns (bytes) {
-      return placeholder;
-    }
-
-    /**
      * @dev Adds deposit block to chain of blocks.
      * @param _owner Owner of deposit and created UTXO.
      * @param _token Deposited token (0x0 represents ETH).
@@ -665,7 +637,7 @@ contract RootChain {
         // deposit with blknum ending with 000.
         require(currentDepositBlock < CHILD_BLOCK_INTERVAL);
 
-        bytes32 root = keccak256(a_a_i(_owner, _token, _amount));
+        bytes32 root = keccak256(_owner, _token, _amount);
         uint256 depositBlock = getDepositBlock();
         childChain[depositBlock] = new ChildBlock(
             root,
